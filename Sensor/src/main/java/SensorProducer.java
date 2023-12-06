@@ -6,31 +6,35 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.json.JSONObject;
 
 import java.util.Properties;
+import java.util.logging.Logger;
 
 public class SensorProducer {
 
+    private static final Logger logger = Logger.getLogger(SensorProducer.class.getName());
+
     private static final String BOOTSTRAP_SERVERS = "localhost:9092";
 
-    private static void produce(String id, String address, String port) {
-        // producer configuration
+
+    public static void produce(String id, String address, String port) {
+
         Properties producerProperties = new Properties();
         producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
         producerProperties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         producerProperties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 
-        try (Producer<String, String> producer = new KafkaProducer<>(producerProperties)) {   // try-with-resources for producer closing
+        try (Producer<String, String> producer = new KafkaProducer<>(producerProperties)) {
 
             JSONObject json = new JSONObject();
             json.put("id", id);
             json.put("address", address);
             json.put("port", port);
-
-            String TOPIC = "Register";
-            ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC, null, json.toString());
+            ProducerRecord<String, String> record = new ProducerRecord<>("Register", null, json.toString());
             producer.send(record);
+            logger.info("Sensor " + id + " registered on topic Register.");
 
         } catch (Exception e) {
             System.out.println("Could not start producer: " + e);
         }
+
     }
 }

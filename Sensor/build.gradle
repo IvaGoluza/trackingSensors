@@ -14,6 +14,7 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
     implementation 'org.apache.kafka:kafka-clients:3.0.0'
     implementation 'org.json:json:20210307'
+    implementation group: 'org.apache.commons', name: 'commons-csv', version: '1.8'
 }
 
 test {
