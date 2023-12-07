@@ -3,51 +3,46 @@ import network.SimpleSimulatedDatagramSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 
 public class UDPserver {
 
-    static final int PORT = 10001; // server port
+    private static final Logger logger = Logger.getLogger(UDPserver.class.getName());
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) throws IOException {
+    public static void receiveMsgs(String port) throws IOException {
 
-        byte[] rcvBuf = new byte[256]; // received bytes
-        byte[] sendBuf = new byte[256];// sent bytes
-        String rcvStr;
+        List<String> receivedReadings = new ArrayList<>();
+        byte[] rcvBuf = new byte[256];  // received bytes
+        byte[] sendBuf; // sent bytes
+        String sensorReading;
 
-        // create a UDP socket and bind it to the specified port on the local
-        // host
-        DatagramSocket socket = new SimpleSimulatedDatagramSocket(PORT, 0.2, 200); //SOCKET -> BIND
+        DatagramSocket socket = new SimpleSimulatedDatagramSocket(Integer.parseInt(port), 0.3, 1000);
 
-        while (true) { //OBRADA ZAHTJEVA
-            // create a DatagramPacket for receiving packets
-            DatagramPacket packet = new DatagramPacket(rcvBuf, rcvBuf.length);
+        while (!Sensor.stop) {
 
-            // receive packet
-            socket.receive(packet); //RECVFROM
+            DatagramPacket packet = new DatagramPacket(rcvBuf, rcvBuf.length); // create a DatagramPacket for receiving packets
+            socket.receive(packet);
 
-            // construct a new String by decoding the specified subarray of
-            // bytes
-            // using the platform's default charset
-            rcvStr = new String(packet.getData(), packet.getOffset(),
-                    packet.getLength());
-            System.out.println("Server received: " + rcvStr);
+            sensorReading = new String(packet.getData(), packet.getOffset(), packet.getLength());
+            System.out.println("[UDP server] Received another system's sensor reading: " + sensorReading + ". Sending back ACK message.");
 
-            // encode a String into a sequence of bytes using the platform's
-            // default charset
-            sendBuf = rcvStr.toUpperCase().getBytes();
-            System.out.println("Server sends: " + rcvStr.toUpperCase());
+            // check if this package has already been received and reading saved
+            String finalSensorReading = sensorReading;
+            if (receivedReadings.stream().noneMatch(reading -> Objects.equals(reading, finalSensorReading))) {
+                receivedReadings.add(sensorReading);                      // add a new reading
+            }
 
-            // create a DatagramPacket for sending packets
-            DatagramPacket sendPacket = new DatagramPacket(sendBuf,
-                    sendBuf.length, packet.getAddress(), packet.getPort());
-
-            // send packet
-            socket.send(sendPacket); //SENDTO
+            sendBuf = ("PACKAGE RECEIVED").getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendBuf, sendBuf.length, packet.getAddress(), packet.getPort());
+            socket.send(sendPacket);
         }
+        System.out.println("[UDP server] Stopping UDP communication between sensors. Listing readings.");
+        receivedReadings.forEach(System.out::println);
+        socket.close();
     }
 }
 

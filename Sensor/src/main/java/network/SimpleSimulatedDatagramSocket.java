@@ -67,7 +67,8 @@ public class SimpleSimulatedDatagramSocket extends DatagramSocket {
             } catch (InterruptedException e) {
                 Thread.interrupted();
             } catch (IOException ex) {
-                Logger.getLogger(SimulatedDatagramSocket.class.getName()).log(Level.SEVERE, null, ex);
+                //Logger.getLogger(SimpleSimulatedDatagramSocket.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(SimpleSimulatedDatagramSocket.class.getName()).info(Level.SEVERE + " " + ex);
             }
         }
     }

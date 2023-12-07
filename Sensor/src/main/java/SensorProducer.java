@@ -30,10 +30,10 @@ public class SensorProducer {
             json.put("port", port);
             ProducerRecord<String, String> record = new ProducerRecord<>("Register", null, json.toString());
             producer.send(record);
-            logger.info("Sensor " + id + " registered on topic Register.");
+            System.out.println("[Producer] Sensor " + id + " registered on topic Register.");
 
         } catch (Exception e) {
-            System.out.println("Could not start producer: " + e);
+            System.out.println("[Producer] Could not start producer: " + e);
         }
 
     }

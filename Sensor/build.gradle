@@ -15,8 +15,23 @@ dependencies {
     implementation 'org.apache.kafka:kafka-clients:3.0.0'
     implementation 'org.json:json:20210307'
     implementation group: 'org.apache.commons', name: 'commons-csv', version: '1.8'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation 'org.slf4j:slf4j-log4j12:1.7.30'
+
 }
 
 test {
     useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes "Main-Class": "Sensor"
+    }
+
+    duplicatesStrategy = 'include'
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }

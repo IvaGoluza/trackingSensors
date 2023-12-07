@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class Sensor {
@@ -19,6 +21,8 @@ public class Sensor {
     private final String port;
 
     private List<Sensor> systemSensors;
+
+    public static boolean stop = false;
 
     private static final EmulatedSystemClock startTime = new EmulatedSystemClock();
 
@@ -49,7 +53,7 @@ public class Sensor {
         int row = (int) (((activeMiliSeconds / 1000) % 100) + 1);
         if (row < sensorReadings.size()) {
             CSVRecord currentSensorReading = sensorReadings.get(row);
-            return currentSensorReading.get("NO2").isEmpty() ? "0.0" : currentSensorReading.get("NO2");   // 0.0 or null
+            return currentSensorReading.get("NO2").isEmpty() ? "0" : currentSensorReading.get("NO2");   // 0.0 or null
         } else return null;
     }
 
@@ -69,7 +73,7 @@ public class Sensor {
         scanner.close();
 
         Sensor sensor = new Sensor(id, port);    // 1. create sensor object
-        logger.info("Sensor Device [ID=" + id + "] [PORT=" + port + "]." );
+        System.out.println("Sensor Device [ID=" + id + "] [PORT=" + port + "]." );
         Thread consumeThread = new Thread(() -> SensorConsumer.consume(sensor));    // 2. start sensor consumer for command and register topics
         consumeThread.start();
 
@@ -77,18 +81,32 @@ public class Sensor {
            Thread.sleep(2000);
         }
 
-        logger.info("All of the sensors have been registered. Starting UDP communication.");
-
-        // TO DO: add while loop ...
-        String currentSensorReading = generateReading(startTime.currentTimeMillis() - startTime.getStartTime(), sensorReadings);
-        logger.info("Sending current NO2 reading: " + currentSensorReading);
-        sensor.systemSensors.forEach(systemSensor -> {
+        System.out.println("[sensor] All of the sensors have been registered. Starting UDP communication.");
+        // start sensor's UDP server
+        Thread UDPServerThread = new Thread(() -> {
             try {
-                UDPclient.sendMsg(Integer.parseInt(systemSensor.getPort()), currentSensorReading);
+                UDPserver.receiveMsgs(sensor.getPort());
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
+        UDPServerThread.start();
+
+        while (!stop) {
+            // 4. generate current reading
+            String currentSensorReading = generateReading(startTime.currentTimeMillis() - startTime.getStartTime(), sensorReadings);
+            System.out.println("[sensor] Sending current NO2 reading: " + currentSensorReading);
+
+            //  5. send current reading to all system sensors in different threads
+            ExecutorService executor = Executors.newFixedThreadPool(sensor.systemSensors.size());
+
+            sensor.systemSensors.forEach(systemSensor -> {
+                executor.execute(new RunnableClientTask(Integer.parseInt(systemSensor.getPort()), currentSensorReading));
+            });
+            executor.shutdown();
+            Thread.sleep(2000);
+        }
+
 
 
     }
