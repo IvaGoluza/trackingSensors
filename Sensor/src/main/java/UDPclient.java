@@ -1,4 +1,4 @@
-import network.EmulatedSystemClock;
+import network.UDPMessage;
 import network.SimpleSimulatedDatagramSocket;
 
 import java.io.IOException;
@@ -10,23 +10,30 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class UDPclient {
+public class UDPClient {
 
-    private static final Logger logger = Logger.getLogger(UDPclient.class.getName());
+    private static final Logger logger = Logger.getLogger(UDPClient.class.getName());
 
-    public static void sendMsg(int port, String sensorReading) throws IOException {
+    public static void sendMsg(int port, String sensorReading, Sensor sensor) throws IOException {
 
         byte[] rcvBuf = new byte[256]; // received bytes
         InetAddress address = InetAddress.getByName("localhost");
 
         DatagramSocket socket = new SimpleSimulatedDatagramSocket(0.3, 1000); //SOCKET
-        String msg = sensorReading + "#" + new EmulatedSystemClock().currentTimeMillis();
+
+        // sensor is sending another reading - another action ...update vectorTime for this sensor
+        sensor.updateVectorTime(sensor.getId());
+
+        // create new UDP message -> send current reading with current scalar and vector time
+        UDPMessage newReading = new UDPMessage(sensorReading, sensor.getScalarTime().currentTimeMillis(), sensor.getVectorTime());
+
+        String msg = newReading.toString();
         byte[] sendBuf = msg.getBytes();
 
         DatagramPacket packet = new DatagramPacket(sendBuf, sendBuf.length, address, port);
-        System.out.println("[UDP client] Sending message to UDP server on port " + port + ". [Message=" + msg + "].");
+        logger.info("[UDP client] Sending message to UDP server on port " + port + ". SENDING" + msg + ".");
         socket.send(packet);
-        String receivedString = "";
+        String receivedString;
 
         while (!Sensor.stop) {
 
@@ -34,16 +41,23 @@ public class UDPclient {
             try {
                 socket.receive(rcvPacket);  // receive a datagram packet from this socket
                 receivedString = new String(rcvPacket.getData(), rcvPacket.getOffset(), rcvPacket.getLength());
-                if(receivedString.equals("PACKAGE RECEIVED")) break;
+                if(receivedString.contains("ACK")) {                   // sent package has been received -> new action -> update vector time
+                    // sensor.updateVectorTime(sensor.getId());
+                    logger.info("[UDP client] Received ACK from port " + port + ": " + receivedString + ".");
+                    break;
+                }
             } catch (SocketTimeoutException e) {
-                System.out.println("[UDP client] Message has not been received. Retransmitting.");
-                socket.send(packet);        // resend packet
+                if(!Sensor.stop) {
+                    logger.info("[UDP client] Message " + sensorReading + " has not been received on port " + port + ". Retransmitting.");
+                    socket.send(packet);        // resend packet
+                } else {
+                    break;
+                }
             } catch (IOException ex) {
                 Logger.getLogger(SimpleSimulatedDatagramSocket.class.getName()).info(Level.SEVERE + " " + ex);
             }
 
         }
-        System.out.println("[UDP client] Received ACK message from server on port " + port + ". [Message=" + receivedString + "].");
         socket.close(); //CLOSE
 
     }

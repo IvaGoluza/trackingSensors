@@ -23,7 +23,6 @@ public class EmulatedSystemClock {
         Random r = new Random();
         jitter = (r.nextInt(20 )) / 100d; //divide by 10 to get the interval between [0, 20], and then divide by 100 to get percentage
     }
-
     public long currentTimeMillis() {
         long current = System.currentTimeMillis();
         long diff =current - startTime;
@@ -34,4 +33,9 @@ public class EmulatedSystemClock {
     public long getStartTime() {
         return startTime;
     }
+
+    public void setStartTime(long startTime) {
+        this.startTime = startTime;
+    }
+
 }

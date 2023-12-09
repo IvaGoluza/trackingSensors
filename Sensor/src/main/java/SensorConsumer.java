@@ -22,7 +22,7 @@ public class SensorConsumer {
 
         try (Consumer<String, String> consumer = new KafkaConsumer<>(consumerProperties)) {
             consumer.subscribe(Arrays.asList("Register", "Command"));
-            System.out.println("[Consumer] Sensor " + sensor.getId() + " subscribed to topics: Command, Register.");
+            logger.info("[Consumer] Sensor " + sensor.getId() + " subscribed to topics: Command, Register.");
 
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
@@ -42,10 +42,10 @@ public class SensorConsumer {
 
     public static void handleCommand(String command, Sensor sensor) {
         if (Objects.equals(command, "start")) {    // If sensor has been started -> sensor registration via sensor producer
-            System.out.println("[Consumer] Sensor " + sensor.getId() + " got START command from Kafka coordinator.");
+            logger.info("[Consumer] Sensor " + sensor.getId() + " got START command from Kafka coordinator.");
             SensorProducer.produce(sensor.getId(), "localhost", sensor.getPort());
         } else if (Objects.equals(command, "stop")) {
-            System.out.println("[Consumer] Sensor " + sensor.getId() + " got STOP command from Kafka coordinator.");
+            logger.info("[Consumer] Sensor " + sensor.getId() + " got STOP command from Kafka coordinator.");
             Sensor.stop = true;
         }
 
@@ -59,7 +59,7 @@ public class SensorConsumer {
         if (!Objects.equals(id, sensor.getId())) {
             Sensor newSensor = new Sensor(id, port);
             sensor.addSystemSensor(newSensor);
-            System.out.println("[Consumer] New system sensor registered on Register topic: [ID=" + id + "] [PORT=" + port + "].");
+            logger.info("[Consumer] New system sensor registered on Register topic: [ID=" + id + "] [PORT=" + port + "].");
         }
 
     }
